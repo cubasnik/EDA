@@ -1,0 +1,9 @@
+{
+  "name": "core-router-1",
+  "ne_type": "vrouter",
+  "management_ip": "10.0.0.5",
+  "metadata": {
+    "vendor": "generic",
+    "site": "dc1"
+  }
+}

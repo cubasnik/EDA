@@ -1,0 +1,196 @@
+heat_template_version: 2018-08-31
+
+description: >
+  EDA (Enhanced Dynamic Activation) virtual network element.
+  Boots a Nova instance on OpenStack, installs Docker via cloud-init and
+  runs the eda-vne container, exposing the EDA REST API / CLI backend on
+  tcp/8080 (and optionally tcp/22 for management access).
+
+parameters:
+
+  ne_name:
+    type: string
+    label: Network element name
+    description: Value reported by GET /health and used as the Nova server name
+    default: eda-vne-01
+
+  image:
+    type: string
+    label: Base image
+    description: Glance image with a modern Linux distro + cloud-init (e.g. Ubuntu 22.04)
+    default: ubuntu-22.04
+
+  flavor:
+    type: string
+    label: Flavor
+    description: Nova flavor for the VNE instance
+    default: m1.small
+
+  key_name:
+    type: string
+    label: SSH key pair
+    description: Name of an existing Nova keypair for management SSH access
+
+  network_id:
+    type: string
+    label: Network ID
+    description: Neutron network (or subnet's network) to attach the VNE to
+
+  external_network_id:
+    type: string
+    label: External/public network ID
+    description: Used to allocate a floating IP so the API is reachable from outside
+    default: ""
+
+  assign_floating_ip:
+    type: boolean
+    label: Assign floating IP
+    default: true
+
+  eda_docker_image:
+    type: string
+    label: EDA container image
+    description: Docker image reference to pull and run (registry/eda-vne:tag)
+    default: "eda-vne:1.0.0"
+
+  api_port:
+    type: number
+    label: API port
+    default: 8080
+
+  management_cidr:
+    type: string
+    label: CIDR allowed to reach the API/SSH
+    description: Restrict this in production instead of 0.0.0.0/0
+    default: "0.0.0.0/0"
+
+  eda_api_key:
+    type: string
+    label: EDA API key
+    description: >
+      Shared secret enforced on /templates, /network-elements and
+      /activations (AAA equivalent). Leave empty to run without
+      authentication (fine for an isolated lab, not recommended
+      otherwise). Clients must then send X-API-Key with this value.
+    default: ""
+    hidden: true
+
+conditions:
+  create_floating_ip:
+    and:
+      - not: { equals: [ { get_param: external_network_id }, "" ] }
+      - equals: [ { get_param: assign_floating_ip }, true ]
+
+resources:
+
+  eda_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name:
+        str_replace:
+          template: eda_sg_NAME
+          params:
+            NAME: { get_param: ne_name }
+      description: Security group for the EDA VNE (API + SSH)
+      rules:
+        - direction: ingress
+          protocol: tcp
+          port_range_min: { get_param: api_port }
+          port_range_max: { get_param: api_port }
+          remote_ip_prefix: { get_param: management_cidr }
+        - direction: ingress
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+          remote_ip_prefix: { get_param: management_cidr }
+        - direction: egress
+          protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+
+  eda_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: network_id }
+      security_groups:
+        - { get_resource: eda_security_group }
+
+  eda_floating_ip:
+    type: OS::Neutron::FloatingIP
+    condition: create_floating_ip
+    properties:
+      floating_network: { get_param: external_network_id }
+      port_id: { get_resource: eda_port }
+
+  eda_server:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: ne_name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: eda_port }
+      metadata:
+        role: eda-vne
+        product: "EDA (Enhanced Dynamic Activation)"
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          params:
+            __NE_NAME__: { get_param: ne_name }
+            __EDA_IMAGE__: { get_param: eda_docker_image }
+            __API_PORT__: { get_param: api_port }
+            __API_KEY__: { get_param: eda_api_key }
+          template: |
+            #!/bin/bash
+            set -eux
+
+            # --- Install Docker Engine ---
+            apt-get update -y
+            apt-get install -y ca-certificates curl gnupg
+            install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+            chmod a+r /etc/apt/keyrings/docker.asc
+            echo \
+              "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+              $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" > /etc/apt/sources.list.d/docker.list
+            apt-get update -y
+            apt-get install -y docker-ce docker-ce-cli containerd.io
+
+            mkdir -p /var/lib/eda
+
+            # --- Run the EDA virtual network element container ---
+            docker run -d \
+              --name eda-vne \
+              --restart unless-stopped \
+              -p __API_PORT__:__API_PORT__ \
+              -e EDA_NE_NAME=__NE_NAME__ \
+              -e EDA_NE_TYPE=virtual-network-element \
+              -e EDA_API_PORT=__API_PORT__ \
+              -e EDA_API_KEY=__API_KEY__ \
+              -v /var/lib/eda:/var/lib/eda \
+              __EDA_IMAGE__
+
+outputs:
+
+  instance_id:
+    description: Nova instance ID of the EDA VNE
+    value: { get_resource: eda_server }
+
+  private_ip:
+    description: Private/management IP address of the EDA VNE
+    value: { get_attr: [eda_server, first_address] }
+
+  floating_ip:
+    description: Public floating IP (if allocated) to reach the EDA API/CLI
+    value: { if: [create_floating_ip, { get_attr: [eda_floating_ip, floating_ip_address] }, "" ] }
+
+  api_url:
+    description: Base URL of the EDA REST API used by eda-cli (EDA_API_URL)
+    value:
+      str_replace:
+        template: "http://ADDRESS:PORT"
+        params:
+          ADDRESS:
+            if: [create_floating_ip, { get_attr: [eda_floating_ip, floating_ip_address] }, { get_attr: [eda_server, first_address] } ]
+          PORT: { get_param: api_port }

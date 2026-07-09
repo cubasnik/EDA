@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eda-vne"
+version = "1.1.0"
+description = "EDA (Enhanced Dynamic Activation) - virtual network element with dynamic service activation API and CLI, deployable on OpenStack"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "EDA-VNE Project" }
+]
+dependencies = [
+    "fastapi>=0.110,<1.0",
+    "uvicorn[standard]>=0.27,<1.0",
+    "pydantic>=2.5,<3.0",
+    "click>=8.1,<9.0",
+    "requests>=2.31,<3.0",
+    "tabulate>=0.9,<1.0",
+    "prometheus-client>=0.19,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "httpx>=0.26",
+]
+
+[project.scripts]
+eda-server = "eda.server:main"
+eda-cli = "eda.cli.main:cli"
+
+[tool.setuptools.packages.find]
+include = ["eda*"]

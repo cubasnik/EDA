@@ -1,0 +1,7 @@
+{
+  "template_id": "<paste template id from `eda-cli template list` here>",
+  "params": {
+    "vlan_id": 100,
+    "fail_at_step": "configure_qos"
+  }
+}

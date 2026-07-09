@@ -1,0 +1,15 @@
+{
+  "name": "vlan-activation",
+  "version": "1.0",
+  "description": "Activate a VLAN service on the target network element",
+  "steps": [
+    "allocate_resources",
+    "configure_vlan",
+    "configure_qos",
+    "verify_activation"
+  ],
+  "parameters_schema": {
+    "vlan_id": "int, required",
+    "qos_profile": "string, optional"
+  }
+}

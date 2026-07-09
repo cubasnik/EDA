@@ -1,0 +1,17 @@
+{
+  "activations": [
+    {
+      "template_id": "<paste template id from `eda-cli template list` here>",
+      "params": {"vlan_id": 101}
+    },
+    {
+      "template_id": "<paste template id from `eda-cli template list` here>",
+      "params": {"vlan_id": 102}
+    },
+    {
+      "template_id": "<paste template id from `eda-cli template list` here>",
+      "ne_id": "<optional target network element id>",
+      "params": {"vlan_id": 103, "auto_retry": {"max_attempts": 3, "backoff_seconds": 1.0}}
+    }
+  ]
+}

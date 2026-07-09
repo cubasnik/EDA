@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  eda-vne:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: eda-vne:1.1.0
+    container_name: eda-vne-01
+    ports:
+      - "8080:8080"
+    environment:
+      EDA_NE_NAME: eda-vne-01
+      EDA_NE_TYPE: virtual-network-element
+      # Uncomment to require X-API-Key on /templates, /network-elements
+      # and /activations (AAA equivalent). Empty/unset disables auth.
+      # EDA_API_KEY: "change-me"
+    volumes:
+      - eda-data:/var/lib/eda
+
+volumes:
+  eda-data:
