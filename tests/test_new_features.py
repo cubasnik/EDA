@@ -1,6 +1,6 @@
 """
 Tests for the second round of features, added after comparing this
-project against the real Ericsson EDA architecture document:
+project against a reference EDA architecture document:
 target mutex, NE blocking/HELD activations, auto-retry, webhooks,
 batch creation, alarms, Prometheus metrics and API-key auth.
 """

@@ -20,7 +20,7 @@ State machine:
     ACTIVE  -> DEACTIVATING -> DEACTIVATED
     FAILED  -> DEACTIVATING -> DEACTIVATED
 
-Several cross-cutting behaviours mirror real Ericsson EDA microservices:
+Several cross-cutting behaviours mirror common EDA-platform microservices:
 
 - Target mutex (Mutex Handler): callers must reserve the target via
   ``store.try_acquire_target()`` *before* scheduling engine work; this

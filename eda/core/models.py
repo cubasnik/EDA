@@ -55,7 +55,7 @@ class ServiceTemplate:
     """
     A service template describes a re-usable activation workflow, e.g.
     "vlan-activation" or "subscriber-session-activation". It is the EDA
-    equivalent of an Ericsson EDA "Service Model" deployed through the
+    equivalent of an EDA "Service Model" deployed through the
     Activation Orchestrator Deployer.
     """
     id: str

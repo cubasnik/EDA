@@ -1,6 +1,6 @@
 """
 Prometheus metrics - the EDA equivalent of the PM Server microservice
-(Prometheus-based performance monitoring in the real Ericsson EDA).
+(Prometheus-based performance monitoring, as commonly found in EDA platforms).
 
 Module-level (process-global) collectors so they survive Store resets in
 tests and are shared by every request/background task in this process.

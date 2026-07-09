@@ -4,7 +4,7 @@ without requiring an external database - handy for a self-contained
 virtual network element image.
 
 Also holds the in-process "target mutex" (mirrors the Mutex Handler
-microservice in the real Ericsson EDA): a lightweight in-memory lock
+microservice found in EDA platforms): a lightweight in-memory lock
 keyed by network-element id, preventing two activations from being
 provisioned concurrently against the same target. This intentionally
 lives in memory (not SQLite) since it only needs to be correct for the
